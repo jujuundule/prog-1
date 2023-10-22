@@ -1,4 +1,16 @@
 #include <stdio.h>
+
+/*
+
+Aufgabe 7:
+Schreiben Sie ein Programm, das von Ihnen einen float-Wert einliest, 
+von diesem Wert 1 subtrahiert und das Ergebnis als float-Wert wieder ausgibt. 
+Geben Sie nach Abfrage durch das Programm den Wert 1.23456e10 ein. 
+Welches Ergebnis erwarten Sie, wenn Ihr Programm eine Millionen mal die 1 
+von Ihrem Wert subtrahieren würde?
+
+*/
+
 int main() {
     double eingabe, ergebnis;
     

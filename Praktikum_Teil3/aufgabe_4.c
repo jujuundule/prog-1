@@ -9,14 +9,34 @@ Setzen Sie entsprechende Klammern und überprüfen Sie, ob das Programm noch den
 */
 
 int main(){
-    double x = -4 * ++i - 6 % 4;
+    int i = 0;
+    int x = -4 * ++i - 6 % 4;
 
     /*
-    Multiplikation:     Priorität 13,
-    Präfix:             14
-    Subtraktion:        
+    OPERATORPRIORITÄTEN:
+
+    Operattor:          Priorität:
+    *******************************
+    
+    Funktionsaufruf (()):       15
+    Präfix (++i):               14
+    Multiplikation (*):         13
+    Modulo (%):                 13
+    Subtraktion (-):            12
+    Zuweisung (=):               2
+
+    *******************************
     */
 
-    printf("%d", x);
+    printf("-4 * ++i - 6 % 4 = %d\n\n", x);
+    // -6
+    i = 0;
+    x = -4 * (++i - 6) % 4;
+    printf("-4 * (++i - 6) % 4 = %d\n\n", x);
+    // 0
+    i = 0;
+    x = (-4 * ++i - 6) % 4;
+    printf("(-4 * ++i - 6) % 4 = %d\n\n", x);
+    // -2
 
 }

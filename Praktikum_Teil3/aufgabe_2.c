@@ -30,8 +30,8 @@ int main(){
     volumenKreiszylinder = 0.25 * pi * durchmesserKreiszylinder * durchmesserKreiszylinder * hoeheKreiszylinder;
 
 //Ausgabe der Ergebnisse:
-    printf("Mantelfläche: %f cm²\n", mantelflaecheKreiszylinder);
-    printf("Oberfläche: %f cm²\n", oberflaecheKreiszylinder);
-    printf("Volumen: %f cm³\n", volumenKreiszylinder);
+    printf("\nMantelfläche: %.2f cm²\n", mantelflaecheKreiszylinder);
+    printf("Oberfläche: %.2f cm²\n", oberflaecheKreiszylinder);
+    printf("Volumen: %.2f cm³\n", volumenKreiszylinder);
 
 }
