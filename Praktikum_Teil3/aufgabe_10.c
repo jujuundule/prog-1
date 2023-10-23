@@ -10,7 +10,8 @@ Zahlen fragen oder die Eingabe mit einem Buchstaben (z.B. ‘q’) beenden lasse
 */
 
 int main (){
-    int anzahl, mittelwert, summe, i = 0;
+    int anzahl, summe, i = 0;
+    double mittelwert = 0;
     
     printf("Anzahl der Zahlen: ");
     scanf("%d", &anzahl);
@@ -24,10 +25,10 @@ int main (){
                 summe += zahlen[i];
             }
             
-            mittelwert = summe/anzahl;
-            printf("Mittelwert: %d\n", mittelwert);
+            mittelwert = (float) summe/anzahl;
+            printf("\n\nMittelwert: %.2lf\n\n", mittelwert);
         
         }else{
-            printf("Das Ergebnis ist 0.\n");
+            printf("\n\nDas Ergebnis ist 0.\n\n");
         }
 }
