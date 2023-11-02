@@ -17,5 +17,8 @@ int main(void) {
     if (i == 0){ // Achtung!!! Vergleichsoperator ==, Zuweisungsoperator =
         printf("*\n\n");
     } 
+
+    i = 1;
+    printf("i = %d\n", -i);
     return 0;
 }
