@@ -10,7 +10,7 @@ Zahlen fragen oder die Eingabe mit einem Buchstaben (z.B. ‘q’) beenden lasse
 */
 
 int main (){
-    int anzahl, summe, i = 0;
+    int anzahl, summe, i = 0, j = 1;
     double mittelwert = 0;
     
     printf("Anzahl der Zahlen: ");
@@ -19,8 +19,8 @@ int main (){
         if(anzahl>0){
             int zahlen[anzahl];
 
-            for(i=0; i<anzahl; i++){
-                printf("Geben Sie die %d. Zahl ein: ", i);
+            for(i=0, j=1; i<anzahl, j<anzahl; i++, j++){
+                printf("Geben Sie die %d. Zahl ein: ", j);
                 scanf("%d", &zahlen[i]);
                 summe += zahlen[i];
             }

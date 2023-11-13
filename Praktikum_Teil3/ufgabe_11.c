@@ -34,7 +34,7 @@ int main (){
     scanf("%lf", &schrittWeise);
 
     // Ausgabe
-    switch (eingabeFunktion)
+    switch(eingabeFunktion)
     {
         case '1':
             for(int i = startWert; i <= endWert; i += schrittWeise)
