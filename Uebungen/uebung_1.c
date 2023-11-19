@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../Bibliotheken/mylib.h" //Eigne Bibliothek
+#include "../Bibliotheken/mylib.h" //Eigene Bibliothek
 
 int main(){
     int a;
