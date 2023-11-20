@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 /*
+Aufgabe 2: Einfügen und Löschen von Arrayelementen
 
 1. Schreiben Sie ein Programm, das das k-te Element (k<=m) aus dem Array entfernt 
 und die entstandene Lücke durch heranziehen der restlichen Arrayelemente schließt.
@@ -25,7 +26,13 @@ void deleteElement(int *v, int *p, int k){
     (*p)--;
 }
 
+// Element an k-ter Stelle ersetzen
+void insertElement(int *v, int k, int neueZahl){
+    v[k] = neueZahl;
+}
+
 int main(){
+
     int array_1[] = {1,2,3,4,5,6,7,8,9,10};
     int k, neueZahl, anz = sizeof(array_1) / sizeof(int);
     int *panz = &anz; // Zeiger auf die Anzahl der Array-Elemente
@@ -54,7 +61,9 @@ int main(){
                     case 'e':{ // e - Bearbeiten
                         printf("Zahl eingeben:");
                         if(scanf("%d", &neueZahl)){
-
+                            getchar();
+                            k--;
+                            insertElement(array_1, k, neueZahl);
                         }else{
                             printf("\nFalsche Eingabe\n");
                         }

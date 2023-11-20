@@ -1,5 +1,6 @@
 #include <stdio.h>
 /*
+Aufgabe 1: Arrayrotation
 
 1. Führen Sie eine einfache Rotation des Arrays nach links durch, d.h. das 
 letzte Element bekommt den Wert des ersten Elementes zugewiesen, das erste 
