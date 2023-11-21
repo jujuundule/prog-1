@@ -4,6 +4,112 @@
 // WIEDERVERWENDBARKEIT
 //
 
+// *********************************************************************************
+
+// AUSGABEN
+
+// Array ausgeben
+void printvek(int v[], int a){
+    printf("Vektor: ");
+    for(int i = 0; i < a; i++){
+        printf("%d ", v[i]);
+    }
+    printf("\n\n");
+}
+
+// *********************************************************************************
+
+// SORTIERALGORITHMEN
+
+// Bubble-Sort Algorithmus
+void bubbleSort(int *v, int a){  
+    int temp, i, tausch; // Hilfvariable
+    
+    do{
+        a--;
+        for(tausch = i = 0; i < a; i++){ // tausch mit 0 initialisieren
+            if (v[i] > v[i + 1]){
+                temp = v[i + 1];
+                v[i + 1] = v[i];
+                v[i] = temp;
+                tausch = 1;   
+            }
+        }  
+    } while (tausch);
+}
+
+// Selection-Sort Algorithmus
+void selectionSort(int *v, int a){
+    int min, i, h;
+    
+    while(a > 1) {
+        for(i = 1, min = 0; i < a ; i++){
+            if (v[i] < v[min]){
+                min = i; 
+            }
+        }
+        h = v[0];
+        v[0] = v[min];
+        v[min] = h;
+        v++; // Vektor beginnt bei nächsten Element
+        a--; // Vektor ist um 1 Element kürzer
+    }
+}
+
+void quickSort(int *v, int left, int right){
+    int l = left, r = right, h;
+    int teiler = v[(l+r)/2];
+
+    do{
+        while(v[l] < teiler) l++;
+       
+        while(teiler < v[r]) r--;
+        
+        if(l <= r){
+            h = v[l];
+            v[l] = v[r];
+            v[r] = h;
+            l++;
+            r--;
+        }
+    }while(l <= r);
+    if(left<r) quickSort(v, left, r);
+    if(l<right) quickSort(v, l, right);
+}
+  
+// Eigene Sortier Algorithmen
+
+// Aufwärts Sortieren
+void sortUp(int *v, int a){ 
+    int temp, i, j; // Hilfvariable
+    for(i = 0; i < a; i++){
+        for(j = i + 1; j < a; j++){
+            if (v[i] > v[j]){
+                temp = v[j];
+                v[j] = v[i];
+                v[i] = temp;   
+            }
+        }
+    }  
+}
+
+// Abwärts Sortieren
+void sortDown(int *v, int a){ 
+    int temp, i, j; // Hilfvariable
+    for(i = 0; i < a; i++){
+        for(j = i + 1; j < a; j++){
+            if (v[i] < v[j]){
+                temp = v[j];
+                v[j] = v[i];
+                v[i] = temp;   
+            }
+        }
+    }  
+}
+
+// *********************************************************************************
+
+// EINGABEN 
 
 // DAU-sichere Eingabe:
 

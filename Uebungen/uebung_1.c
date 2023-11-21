@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "../Bibliotheken/mylib.h" //Eigene Bibliothek
 
+// DAU sichere Eingabe
+
 int main(){
     int a;
     char c;
