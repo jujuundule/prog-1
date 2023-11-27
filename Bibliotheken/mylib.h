@@ -4,7 +4,48 @@
 // WIEDERVERWENDBARKEIT
 //
 
-// *********************************************************************************
+// >>>> INHALTSVERZEICHNIS <<<<
+
+// Eingaben
+// Ausgaben
+// Sortieralgorithmen
+// Dateiarbeit
+
+
+//   *********************************************************************************
+
+// >>>> EINGABEN <<<<
+
+// DAU-sichere Eingabe:
+
+int DAUEingabe(char* prompt, int min, int max, int toleranz);       //char* = Zeichenkette | Deklaration
+
+int DAUEingabe(char* prompt, int min, int max, int toleranz){       // Definition
+    int i;
+   
+    if (toleranz == 0){
+        printf("Du DAU\n");
+        exit(1);
+    }
+
+    printf("%s\n", prompt);           // %s als Platzhalter für eine Zeichenkette
+                
+    while (fgetc(stdin) != '\n');  // Leert den Eingabepuffer | !!FUNKTIONIERT NICHT!!
+           
+    if ( scanf("%d", &i) != 1){
+        printf(">> Bitte eine Zahl eingeben! <<\n");
+        i = DAUEingabe(prompt, min, max, toleranz-1);   // Teilproblem: DAU sichere Eingabe mit Toleranz-1
+    }
+    
+    if ( (i<min) || (i>max) ){
+        printf(">> Wertebereich [%d, %d] beachten! <<\n", min, max);
+        i = DAUEingabe(prompt, min, max, toleranz-1);   // Teilproblem: DAU sichere Eingabe mit Toleranz-1
+    }
+
+    return i;
+}
+
+//   *********************************************************************************
 
 // AUSGABEN
 
@@ -109,33 +150,97 @@ void sortDown(int *v, int a){
 
 // *********************************************************************************
 
-// EINGABEN 
+// >>>> DATEIARBEIT <<<<
 
-// DAU-sichere Eingabe:
-
-int DAUEingabe(char* prompt, int min, int max, int toleranz);       //char* = Zeichenkette | Deklaration
-
-int DAUEingabe(char* prompt, int min, int max, int toleranz){       // Definition
-    int i;
-   
-    if (toleranz == 0){
-        printf("Du DAU\n");
-        exit(1);
+// Datei zeichenweises lesen   
+void zeichenweisesLesen(char dateiname[]){
+    // Filepointer
+    FILE *fp;
+    if((fp = fopen(dateiname, "rt")) == NULL){
+        printf("Datei konnte nicht geoeffnet werden!\n");
+        return;
+    }else{
+        char c;
+        while((c = fgetc(fp)) != EOF){
+            printf("%c", c);
+        }
+        // Schließen der Datei
+        fclose(fp); 
     }
+}
 
-    printf("%s\n", prompt);           // %s als Platzhalter für eine Zeichenkette
-                
-    while (fgetc(stdin) != '\n');  // Leert den Eingabepuffer | !!FUNKTIONIERT NICHT!!
-           
-    if ( scanf("%d", &i) != 1){
-        printf(">> Bitte eine Zahl eingeben! <<\n");
-        i = DAUEingabe(prompt, min, max, toleranz-1);   // Teilproblem: DAU sichere Eingabe mit Toleranz-1
+// Datei zeilenweises lesen
+void zeilenweisesLesen(char dateiname[]){
+    // Filepointer
+    FILE *fp;
+    if((fp = fopen(dateiname, "rt")) == NULL){
+        printf("Datei konnte nicht geoeffnet werden!\n");
+        return;
+    }else{
+        char zeile[100];
+        while(fgets(zeile, 100, fp) != NULL){
+            printf("%s", zeile);
+        }
+        fclose(fp);
     }
-    
-    if ( (i<min) || (i>max) ){
-        printf(">> Wertebereich [%d, %d] beachten! <<\n", min, max);
-        i = DAUEingabe(prompt, min, max, toleranz-1);   // Teilproblem: DAU sichere Eingabe mit Toleranz-1
-    }
+}
 
-    return i;
+// Datei überschreiben
+void textReplace(char dateiname[]){
+    // Filepointer
+    FILE *fp;
+    if((fp = fopen(dateiname, "w")) == NULL){
+        printf("Datei konnte nicht geoeffnet werden!\n");
+        return;
+    }else{
+        fprintf(fp, "Menschliches Denken ist vom Irrtum begleitet,\n");
+        fprintf(fp, "menschliches Handeln ist an das Unzulängliche gebunden,\n");
+        fprintf(fp, "also sind Fehler prinzipiell unvermeidlich.\n");
+        fclose(fp);
+    }
+}
+
+// Text an Datei anfügen
+void textAppend(char dateiname[]){
+    // Filepointer
+    FILE *fp;
+    if((fp = fopen(dateiname, "a")) == NULL){
+        printf("Datei konnte nicht geoeffnet werden!\n");
+        return;
+    }else{
+        fprintf(fp, "Menschliches Denken ist vom Irrtum begleitet,\n");
+        fprintf(fp, "menschliches Handeln ist an das Unzulängliche gebunden,\n");
+        fprintf(fp, "also sind Fehler prinzipiell unvermeidlich.\n");
+        fclose(fp);
+    }
+}
+
+// Ausgabe der Dateistatistik
+void fileStatistic(char dateiname[]){
+    // Filepointer
+    FILE *fp;
+    if((fp = fopen(dateiname, "rt")) == NULL){
+        printf("Datei konnte nicht geoeffnet werden!\n");
+        return;
+    }else{
+        char c;
+        int zeichen = 0;
+        int woerter = 0;
+        int zeilen = 0;
+        while((c = fgetc(fp)) != EOF){
+            zeichen++;
+            if(c == '\n'){
+                zeilen++;
+            }
+            if(c == ' ' || c == '.' || c == ',' || c == ';'){
+                woerter++;
+            }
+        }
+        printf("Zeichen: %d\n", zeichen);
+        printf("Wörter: %d\n", woerter);
+        printf("Zeilen: %d\n", zeilen);
+        printf("\n\n", zeilen);
+        // Schließen der Datei
+        fclose(fp); 
+    }
 }
