@@ -34,8 +34,27 @@ z hex num Bit     z hex num Bit
 	Y 59 89 1011001 | y 79 121 1111001 |
 	Z 5a 90 1011010 | z 7a 122 1111010 |
 */
+void a7(){
+	unsigned char c = 'a', C = 'A', mask;
+	printf("z\thex\tnum\tBit\t\tz\thex\tnum\tBit\n");
+    printf("--------------------------------------------------------------------------\n");
+	for(; c <= 'z'; c++, C++){
+		printf(\n)
+	}
+}
+// Diese Funktion wandelt eine Dezimalzahl in eine Binärzahl um:
+int decimalToBinary(int n){
+    int remainder;
+    int binary = 0, i = 1;
 
-int decimalToBinary(int n);
+    while(n != 0){
+        remainder = n%2;
+        n = n/2;
+        binary = binary + (remainder*i);
+        i = i*10;
+    }
+    return binary;
+}
 
 int main (){
     int i, j;
@@ -53,19 +72,7 @@ int main (){
 
     return 0;
 }
-// Diese Funktion wandelt eine Dezimalzahl in eine Binärzahl um:
-int decimalToBinary(int n){
-    int remainder;
-    int binary = 0, i = 1;
 
-    while(n != 0){
-        remainder = n%2;
-        n = n/2;
-        binary = binary + (remainder*i);
-        i = i*10;
-    }
-    return binary;
-}
 
 
 
