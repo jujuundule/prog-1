@@ -11,10 +11,6 @@
 
 // Das ist das Schema für einen Spielzug
 
-struct PlayerMove
-{
-    int column;
-};
 
 // Schablone von einem Knoten
 struct GameFieldState
