@@ -1,8 +1,17 @@
 // Juliane Träger | 54004 | s86422 | 23/043/01
+
+// ======================================================================================== 
+//                                         Header-Dateien 
+// ======================================================================================== 
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
+#include <unistd.h>
 
-// ANSI Escape-Sequenzen für die formatierte Ausgabe in der Konsole
+// ======================================================================================== 
+//                                     Makros und Konstanten
+// ======================================================================================== 
 
 // Text Attribute
 #define RESET       "\033[0m"
@@ -34,23 +43,28 @@
 #define B_WHITE     "\033[47m"
 
 // Spielfeld 
-
 #define ROWS 6
 #define COLS 7
-#define MAXGAMEMOVES 42
-
-char board[ROWS][COLS];
 
 // Spielzüge
+#define MAXGAMEMOVES 42
 
+// ======================================================================================== 
+//                               Strukturen und Typdefinitionen:
+// ======================================================================================== 
+
+// Struktur: Spielzug
 struct GameMove{
+    int number;
+    int player;
     char board[ROWS][COLS];
     struct GameMove *next;
     struct GameMove *previous;
 };
 
+// Struktur: Spieler
 struct Player{
-    char name[25];
+    char name[26];
     char piece; 
 }player_1, player_2;
 
@@ -58,48 +72,57 @@ struct Player{
 struct Player player_1 = {"Spieler 1", 'X'};
 struct Player player_2 = {"Spieler 2", 'O'};
 
-//-------------------------------------------- Funktions Deklarationen --------------------------------------------
+// ======================================================================================== 
+//                                  Funktions-Deklarationen 
+// ======================================================================================== 
 
-
+// ASCII Art
 void printLine(char, int);
 void printGameTitle(void);
 void printTrophy(void);
-void printGoodbye(void); 
+void printGoodbye(void);
 
+// Konsole leeren
+void clearConsole(void);
+
+// Nutzereingabe und Validierung
+int getUserInput(char*, int, int);
+int inputName(struct Player*, int);
+
+// Menüs
 void mainMenu(void);
 void newGameMenu(void);
 void twoPlayersMenu(void);
 void namePlayersMenu(void);
 void exitGameMenu(void);
 void loadGameMenu(void);
-void gameMenu(int, int);
+void gameMenu(int, int, int);
 
+// Spiel starten: 2 Spieler
 void startGame(void);
 
-void printEndScreen(void);
-
-int getUserInput(char*, int, int);
-
+// Spielfunktionen
 void initializeBoard(void);
 void printBoard(void);
 int dropPiece(int, int);
 int checkwin(int);
 void announceWinner(int);
 
+// End Screen
+void printEndScreen(void);
 
-
+// Für die Undo Funktion
 void appendMove(struct GameMove**, int);
 
-//-------------------------------------------- Main Funktion --------------------------------------------
-int main(){
+// ======================================================================================== 
+//                                      Globale Variablen
+// ======================================================================================== 
 
-    printGameTitle();
-    mainMenu();
-    
-    return 0;
-}
+char board[ROWS][COLS];
 
-//-------------------------------------------- Funktions Definitionen --------------------------------------------
+// ======================================================================================== 
+//                                   Funktions-Definitionen  
+// ======================================================================================== 
 
 // Linie ausgeben
 void printLine(char linetype, int length){
@@ -110,7 +133,7 @@ for(i = 0; i <= length; i++){
 printf("\n");
 }
 
-// ASCII Art
+// -------------------------------------- ASCII Art --------------------------------------
 
 // 4 Gewinnt
 void  printGameTitle(){
@@ -135,6 +158,7 @@ printf("                          ) (\n");
 printf("                        _.' '._\n");
 printf("                       '''''''''\n");
 }
+
 // Goodbye
 void printGoodbye() {
     printf("   ____                    _  _                   \n");
@@ -145,8 +169,95 @@ void printGoodbye() {
     printf("                                     |___/        \n");
 }
 
-// Hauptmenü
+// -------------------------------------- Konsole leeren --------------------------------------
+
+void clearConsole(){
+    printf("\e[1;1H\e[2J");
+}
+
+// -------------------------------------- Nutzereingabe und Validierung --------------------------------------
+
+int getUserInput(char *instruction, int min, int max) {
+    int input;
+    int validInput;
+
+    do {
+        // Aufforderung an den Nutzer ausgeben
+        printf("%s [%d-%d]: ", instruction, min, max);
+
+        // Eingabe überprüfen
+        validInput = scanf("%d", &input);
+
+        if (validInput != 1 || input < min || input > max) {
+            // Fehlerhafte Eingabe behandeln
+            printf("%sFalsche Eingabe%s\n", F_RED, RESET);
+
+            // Den Eingabepuffer leeren
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF);
+
+            validInput = 0; // Markiere die Eingabe als ungültig
+        } else {
+            // Überprüfen, ob der Eingabepuffer weitere Zeichen enthält (Buchstaben oder Symbole)
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) {
+                if (!isspace(c)) {
+                    // Fehlerhafte Eingabe behandeln
+                    printf("%sFalsche Eingabe%s\n", F_RED, RESET);
+
+                    // Den Eingabepuffer leeren
+                    while ((c = getchar()) != '\n' && c != EOF);
+
+                    validInput = 0; // Markiere die Eingabe als ungültig
+                    break;
+                }
+            }
+        }
+
+    } while (validInput != 1);
+
+    return input;
+}
+
+int inputName(struct Player *player, int maxLength) {
+    int validInput = 0;
+    while(!validInput){
+        printf("Bitte geben Sie einen neuen Namen ein (maximal %d Buchstaben): ", maxLength);
+
+        // Lese den Namen vom Benutzer ein
+        fgets(player->name, sizeof(player->name), stdin);
+        validInput = 1; // Erfolgreiche Eingabe
+
+        // Überprüfe, ob der Name länger als 0 ist
+        if (player->name[0] == '\0' || player->name[0] == '\n') {
+            printf("\n%sUngültige Eingabe. Der Name darf nicht leer sein.%s\n", F_RED, RESET);
+            validInput = 0; // Fehler, wenn der Name leer ist
+        }
+
+        // Überprüfe, ob der Name die maximale Länge überschreitet
+        if (strlen(player->name) > maxLength + 1) {
+            printf("\n%sUngültige Eingabe. Der Name darf maximal %d Buchstaben haben.%s\n", F_RED, maxLength, RESET);
+            validInput = 0; // Fehler, wenn der Name zu lang ist
+        }
+
+        // Überprüfe, ob alle Zeichen im Namen Buchstaben sind
+        for (int i = 0; player->name[i] != '\0' && player->name[i] != '\n'; i++) {
+            if (!isalpha(player->name[i])) {
+                printf("\n%sUngültige Eingabe. Der Name darf nur Buchstaben enthalten.%s\n", F_RED, RESET);
+                validInput = 0; // Fehler, wenn ein nicht-alfabetisches Zeichen gefunden wird
+            }
+        }
+        // Entferne das newline-Zeichen am Ende des Namens, das durch fgets hinzugefügt wurde
+        player->name[strcspn(player->name, "\n")] = '\0';
+    }
+}
+
+// -------------------------------------- Hauptmenü --------------------------------------
+
 void mainMenu(){
+    
+    // Konsole leeren
+    clearConsole();
     
     // Menü ausgeben
     printf("%s", F_CYAN);
@@ -177,9 +288,13 @@ void mainMenu(){
     }
 }
 
-// Untermenü "Neues Spiel starten"
+// -------------------------------------- Untermenü "Neues Spiel starten" --------------------------------------
+
 void newGameMenu(){
     
+    // Konsole leeren
+    clearConsole();
+
     // Menü ausgeben
     printf("%s", F_CYAN);
     printLine('=', 55);
@@ -209,9 +324,13 @@ void newGameMenu(){
     }
 }
 
-// Untermenü "2 Spieler"
+// -------------------------------------- Untermenü "2 Spieler" --------------------------------------
+
 void twoPlayersMenu(){
     
+    // Konsole leeren
+    clearConsole();
+
     // Menü ausgeben
     printf("%s", F_CYAN);
     printLine('=', 55);
@@ -241,9 +360,13 @@ void twoPlayersMenu(){
     }
 }
 
-// Untermenü "Spieler umbenennen"
+// -------------------------------------- Untermenü "Spieler umbenennen" --------------------------------------
+
 void namePlayersMenu(){
-    
+
+    // Konsole leeren
+    clearConsole();
+
     // Menü ausgeben
     printf("%s", F_CYAN);
     printLine('=', 55);
@@ -259,21 +382,25 @@ void namePlayersMenu(){
 
     switch (choice){
             case 1:
-                printf("\nBitte geben Sie einen Namen für Spieler 1 ein: ");
-                if(scanf("%24s", &player_1.name)){
-                    printf("Spieler 1 wurde in %s%s%s umbenannt\n", F_MAGENTA, player_1.name, RESET);
+                printf("\n%sSpieler 1:%s\n", F_MAGENTA, RESET);
+                printf("[Aktueller Name: %s%s%s]\n\n", F_MAGENTA, player_1.name, RESET);
+                if(inputName(&player_1, 25)){
+                    printf("Spieler 1 wurde in %s%s%s umbenannt.\n", F_MAGENTA, player_1.name, RESET);
                 }else{
-                    printf("Spieler 1 konnte nicht umbenannt werden");
+                    printf("Spieler 1 konnte nicht umbenannt werden.");
                 }
+                sleep(2);
                 namePlayersMenu();
                 break;
             case 2:
-                printf("\nBitte geben Sie einen Namen für Spieler 2 ein: ");
-                if(scanf("%24s", &player_2.name)){
-                    printf("Spieler 2 wurde in %s%s%s umbenannt\n", F_MAGENTA, player_2.name, RESET);
+                printf("\n%sSpieler 2:%s\n", F_MAGENTA, RESET);
+                printf("[Aktueller Name: %s%s%s]\n\n", F_MAGENTA, player_2.name, RESET);
+                if(inputName(&player_2, 25)){
+                    printf("Spieler 2 wurde in %s%s%s umbenannt.\n", F_MAGENTA, player_2.name, RESET);
                 }else{
-                    printf("Spieler 2 konnte nicht umbenannt werden");
+                    printf("Spieler 2 konnte nicht umbenannt werden.");
                 }
+                sleep(2);
                 namePlayersMenu();
                 break;
             case 3:
@@ -285,9 +412,13 @@ void namePlayersMenu(){
     }
 }
 
-// Untermenü "Spiel beenden"
+// -------------------------------------- Untermenü "Spiel beenden" --------------------------------------
+
 void exitGameMenu(){
     
+    // Konsole leeren
+    clearConsole();
+
     // Menü ausgeben
     printf("%s", F_CYAN);
     printLine('=', 55);
@@ -309,7 +440,7 @@ void exitGameMenu(){
                 mainMenu();
                 break;
             case 3:
-                initializeBoard();
+                printf("TODO Spiel wieder aufnehmen\n");
                 break;
             default:
                 printf("%sFalsche Eingabe%s\n", F_RED, RESET);
@@ -317,9 +448,13 @@ void exitGameMenu(){
     }
 }
 
-// Untermenü "Spiel beenden"
+// -------------------------------------- Untermenü "Spiel beenden" --------------------------------------
+
 void loadGameMenu(){
     
+    // Konsole leeren
+    clearConsole();
+
     // Menü ausgeben
     printf("%s", F_CYAN);
     printLine('=', 55);
@@ -349,102 +484,129 @@ void loadGameMenu(){
     }
 }
 
-// Untermenü Game Menü
-void gameMenu(const int game_move_number, const int game_move_status) {
+// -------------------------------------- Game Menü --------------------------------------
+
+void gameMenu(int game_move_number, int game_move_status, int currentPlayer) {
     // Menü ausgeben
     printf("%s", F_CYAN);
     for (int i = 0; i < COLS; i++) {
         printf("  %d ", i + 1);
     }
     printf("\n\n8 - Spiel beenden\n9 - Zurück" RESET "\n\n");
-    printf("%sSpielzug: %d von %d%s\n\n", F_YELLOW, game_move_number, MAXGAMEMOVES, RESET);
+    printf("%sSpielzug: %d von %d %s\n\n", F_YELLOW, game_move_number, MAXGAMEMOVES, RESET);
 
-    const char* currentPlayer = (game_move_number % 2 != 0) ? player_1.name : player_2.name;
-    printf("%s%s%s ", F_MAGENTA, currentPlayer, RESET);
+    printf("%s%s:%s\n", F_MAGENTA, (currentPlayer == 1)? player_1.name : player_2.name, RESET);
 
     if (game_move_status == 0) {
         printf("%sDie Zeile ist voll%s\n", F_RED, RESET);
     }
 }
 
-// EndScreen
-
-void printEndScreen(){
-    printGoodbye();
-    printf("\n%s", F_RED);
+// -------------------------------------- Siegerehrung Menü --------------------------------------
+void announceWinnerMenu() {
+    // Menü ausgeben
+    printf("%s", F_CYAN);
     printLine('=', 55);
-    printf("\n                      SPIEL BEENDET\n\n");
+    printf("\n                 1 - Zurück zum Hauptmenü\n");
+    printf("                 2 - Spiel neustarten\n");
+    printf("                 3 - Spiel beenden\n\n");
     printLine('=', 55);
-    printf("%s\n", RESET);
-}
+    printf("%s", RESET);
 
-int getUserInput(char *instruction, int min, int max) {
-    int input;
+    // Menüauswahl
+    int choice = getUserInput("Bitte wählen Sie eine Option", 1, 3);
 
-    // Aufforderung an den Nutzer ausgeben
-    printf("%s [%d-%d]: ", instruction, min, max);
-
-    // Schleife wird durchlaufen, solange die Nutzereingabe falsch ist
-    while (1) {
-        // Eingabe überprüfen
-        if (scanf("%d", &input) != 1 || input < min || input > max) {
-            // Fehlerhafte Eingabe behandeln
-            printf("%sFalsche Eingabe%s\n", F_RED, RESET);
-            printf("%s: ", instruction);
-            // Den Eingabepuffer leeren
-            while (getchar() != '\n');
-        } else {
-            // Gültige Eingabe, die Schleife verlassen
-            break;
-        }
+    switch (choice){
+            case 1:
+                mainMenu();
+                break;
+            case 2:
+                startGame();
+                break;
+            case 3:
+                printEndScreen();
+                break;
+            default:
+                printf("%sFalsche Eingabe%s\n", F_RED, RESET);
+                break;
     }
-    return input;
 }
 
-// Spiel starten
+// -------------------------------------- Spiel starten --------------------------------------
 
 void startGame(){
     // Initialisiere Variablen
-    int choice;
-    int game_move_number, winner = 0;
-    int currentPlayer, game_move_status = 1;
+    int choice = 0;
+    int game_move_number = 0; 
+    int winner = 0;
+    int currentPlayer = 1; 
+    int game_move_status = 1;
+
+    // Konsole leeren
+    clearConsole();
     
-    printf("\n%sViel Spaß!%s\n\n", F_GREEN, RESET);
+    printf("\n%sEin neues Spiel wird gestartet.\nViel Spaß!%s %s %sund%s %s%s \n\n", F_GREEN, F_MAGENTA, player_1.name, F_GREEN, F_MAGENTA, player_2.name, RESET);
+
+    sleep(2);
     
+    // Spielfeld wird initialisiert --> alle Felder mit " " füllen
     initializeBoard();
     
-    do{
+    // Schleife für abwechselnde Spielzüge
+    while((choice != 8) && (game_move_number <= MAXGAMEMOVES) && (winner == 0)){
+        
+        // Konsole leeren
+        clearConsole();
+        
+        // Spielfeld ausgeben
+        printBoard();
+        
+        // Spiel beenden, wenn ein Spieler gewonnen hat
         if(checkwin(currentPlayer)){
             winner = currentPlayer;
+            announceWinner(winner);
             break;
         }
-        if(game_move_status){
+
+        // Spiel beenden, wenn maximale Anzahl von Spielzügen erfolgt ist
+        if(game_move_number >= MAXGAMEMOVES){
+            announceWinner(winner);
+            break;
+        }
+
+        // Überprüft ob Zeile voll ist
+        if(game_move_status == 1){
             game_move_number++;
         }
+
+        // Festlegen, welcher Spieler gerade am Zug ist
         if(game_move_number % 2 == 0){
             currentPlayer = 2;
         }else{
             currentPlayer = 1;
         }
-        printBoard();
-        gameMenu(game_move_number, game_move_status);
+
+        gameMenu(game_move_number, game_move_status, currentPlayer);
+
         // Menüauswahl
         choice = getUserInput("Bitte wählen Sie eine Option", 1, 9);
-        
-        switch (choice)
-        {
-        case 8:
-            exitGameMenu();
-            break;
-        case 9:
-            printf("TODO: Zurück Funktion\n");
-        break;
-        default:
-            game_move_status = dropPiece(choice - 1, game_move_number);
+
+        switch (choice){
+            case 8:
+                exitGameMenu();
+                break;
+            case 9:
+                printf("TODO: Zurück Funktion\n");
+                break;
+            default:
+                game_move_status = dropPiece(choice - 1, game_move_number);
+                break;
         }
-    }while((choice  != 8) && (game_move_number < MAXGAMEMOVES) && (winner == 0));
-    announceWinner(winner);
+    }
 }
+
+
+// -------------------------------------- Spielfunktionen --------------------------------------
 
 // Spielfeld initialsieren
 void initializeBoard(){
@@ -538,15 +700,39 @@ int checkwin(int currentPlayer) {
 }
 
 void announceWinner(int winner){
-    printf("%s", F_YELLOW);
-    printLine('=', 55);
-    printTrophy();
-    printf("\n                 %sHERZLICHEN GLÜCKWUNSCH%s%s\n\n", UNDERLINE, RESET, F_YELLOW);
-    (winner % 2 != 0)? printf("                 %s%s%s hat gewonnen \n\n", F_MAGENTA, player_1.name, F_YELLOW) : printf("                 %s%s%s hat gewonnen \n\n", F_MAGENTA, player_2.name, F_YELLOW);
-    printLine('=', 55);
+    // Bekanntgabe des Gewinners
+   printf("%s", F_YELLOW);
+   printLine('=', 55);
+    if(winner != 0){
+        printTrophy();
+        printf("\n                 %sHERZLICHEN GLÜCKWUNSCH%s%s\n\n", UNDERLINE, RESET, F_YELLOW);
+        printf("                 %s%s [%c]%s hat gewonnen \n\n", F_MAGENTA, (winner == 1)? player_1.name : player_2.name, (winner == 1)? player_1.piece : player_2.piece, F_YELLOW);
+        printLine('=', 55);    
+    }
+    // Unentschieden
+    else{
+        printf("\n                     %sUNENTSCHIEDEN%s%s\n\n", UNDERLINE, RESET, F_YELLOW);
+        printLine('=', 55);
+    }
     printf("%s", RESET);
-    mainMenu();
+    announceWinnerMenu();
 }
+
+
+// -------------------------------------- EndScreen --------------------------------------
+
+void printEndScreen(){
+    clearConsole();
+    printGoodbye();
+    printf("\n%s", F_RED);
+    printLine('=', 55);
+    printf("\n                      SPIEL BEENDET\n\n");
+    printLine('=', 55);
+    printf("%s\n", RESET);
+    sleep(3);
+    clearConsole();
+}
+
 
 // Funktion zum Hinzufügen eines neuen Knotens am Ende der Liste
 void appendMove(struct GameMove** head, int col){
@@ -574,6 +760,16 @@ void appendMove(struct GameMove** head, int col){
     // Den neuen Knoten an das Ende der Liste anhängen
     last->next = newGameMove;
     newGameMove->previous = last;
+}
+
+// ======================================================================================== 
+//                                        Main Funktion
+// ======================================================================================== 
+
+void main(){
+    printGameTitle();
+    sleep(2);
+    mainMenu();
 }
 
 
