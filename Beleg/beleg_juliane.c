@@ -57,6 +57,7 @@
 //                               Strukturen und Typdefinitionen:
 // ======================================================================================== 
 
+// Struktur: Spielzug
 typedef struct {
     int number;
     int player;
@@ -65,9 +66,13 @@ typedef struct {
     struct GameMove* previous;
 } GameMove;
 
+// Struktur: Spielzug Historie
 typedef struct {
     GameMove* gamestart;
 } GameMoveHistory;
+
+// Enum: Spieler
+typedef enum { EMPTY, PLAYER_1, PLAYER_2 } Player_number;
 
 // Struktur: Spieler
 typedef struct {
@@ -90,6 +95,7 @@ void printLine(char, int);
 void printGameTitle(void);
 void printTrophy(void);
 void printGoodbye(void);
+void printEmoticon(void);
 
 // Konsole leeren
 void clearConsole(void);
@@ -103,7 +109,7 @@ void mainMenu(void);
 void newGameMenu(void);
 void twoPlayersMenu(void);
 void namePlayersMenu(void);
-void exitGameMenu(void);
+void exitGameMenu();
 void loadGameMenu(void);
 void gameMenu(GameMove*, int);
 
@@ -120,9 +126,15 @@ void announceWinner(int, int);
 // End Screen
 void printEndScreen(void);
 
+// Speichern des Spielstands
+void saveGame(GameMove*, const char);
+
 // Doppelt verkettete Liste
-void insertGameMove(GameMove*, GameMoveHistory*);
-void deleteGameMove(GameMove*, GameMoveHistory*);
+void appendGameMove(GameMoveHistory*, GameMove*);
+GameMove* getLastMove(GameMoveHistory*);
+void freeGameMoveHistory(GameMoveHistory*);
+void undoLastMove(GameMoveHistory*);
+
 
 // ======================================================================================== 
 //                                      Globale Variablen
@@ -181,6 +193,11 @@ void printGoodbye() {
     printf("                                     |___/        \n");
 }
 
+void printEmoticon(){
+    printf("\n                      ¯\\_(ツ)_/¯\n");
+
+}
+
 // -------------------------------------- Konsole leeren --------------------------------------
 
 void clearConsole(){
@@ -198,7 +215,7 @@ int getUserInput(char *instruction, int min, int max) {
         printf("%s [%d-%d]: ", instruction, min, max);
 
         validInput = scanf("%d", &input);
-        
+
         // Eingabe überprüfen
         if (validInput != 1 || input < min || input > max) {
             // Fehlerhafte Eingabe behandeln
@@ -453,7 +470,7 @@ void exitGameMenu(){
                 mainMenu();
                 break;
             case 3:
-                printf("TODO Spiel wieder aufnehmen\n");
+                startGame();
                 break;
             default:
                 printf("%sFalsche Eingabe%s\n", F_RED, RESET);
@@ -514,7 +531,7 @@ void gameMenu(GameMove* currentMove, int game_move_status) {
     for (int i = 0; i < COLS; i++) {
         printf("  %d ", i + 1);
     }
-    printf("\n\n8 - Spiel beenden\n9 - Zurück" RESET "\n\n");
+    printf("\n\n8 - Spiel beenden\n9 - Letzten Spielzug rückgängig machen" RESET "\n\n");
     printf("%sSpielzug: %d von %d %s\n\n", F_YELLOW, currentMove->number, MAXGAMEMOVES, RESET);
 
     printf("%s%s:%s\n", F_MAGENTA, (currentMove->player == 1)? player_1.name : player_2.name, RESET);
@@ -562,21 +579,19 @@ void startGame(){
     GameMoveHistory history;
 
     // Erstelle den ersten Spielzug
-    GameMove* currentMove = malloc(sizeof(GameMove));
+    GameMove* currentMove = calloc(1, sizeof(GameMove));
     
-    //  Spielzug initialisieren
+    // Den ersten Spielzug initialisieren
     currentMove->number = 0;
     currentMove->player = 1;
     currentMove->next = NULL;
     currentMove->previous = NULL;
 
-    // den ersten Spielzug in die Historie eintragen
+    // Den ersten Spielzug in die Historie eintragen
     history.gamestart = currentMove;
 
-    int choice = 0;
-    int winner = 0;
-    int game_move_status = 1;
-    int win_reason = 0;
+    // weitere Spielvariablen initialisieren
+    int choice = 0, winner = 0, game_move_status = 1, win_reason = 0;
 
     // Konsole leeren
     clearConsole();
@@ -587,38 +602,33 @@ void startGame(){
 
     // Spielfeld wird initialisiert --> alle Felder mit " " füllen
     initializeBoard(currentMove);
+
+    // leeres Spielfeld in die Historie eintragen (Spielzug 0)
+    appendGameMove(&history, currentMove);
+
     
     // Schleife für abwechselnde Spielzüge
-    while((choice != 8) && (currentMove->number <= MAXGAMEMOVES) && (winner == 0) && (game_move_status == 1)){
+    // Schleife wird beendet, wenn ein Spieler gewonnen hat, die maximale Anzahl von Spielzügen erreicht ist, oder der Spieler das Spiel beendet
+    while((choice != 8)  && (checkwin(currentMove) == 0) && (currentMove->number < MAXGAMEMOVES)){
+
         // Spielzug hochzählen
         currentMove->number++;
+
+        // Spielerwechsel
+        switch (currentMove->number % 2) {
+            case 0:
+                currentMove->player = PLAYER_2;
+                break;
+            default:
+                currentMove->player = PLAYER_1;
+                break;
+        }
 
         // Konsole leeren
         clearConsole();
 
         // Spielfeld ausgeben
         printBoard(currentMove);
-        
-        // Spiel beenden, wenn ein Spieler gewonnen hat
-        if(checkwin(currentMove) != 0){
-            winner = currentMove->player;
-            win_reason = checkwin(currentMove);
-            announceWinner(winner, win_reason);
-            break;
-        }
-
-        // Spiel beenden, wenn maximale Anzahl von Spielzügen erfolgt ist
-        if(currentMove->number >= MAXGAMEMOVES){
-            announceWinner(winner, win_reason);
-            break;
-        }
-
-        // Festlegen, welcher Spieler gerade am Zug ist
-        if(currentMove->number % 2 == 0){
-            currentMove->player = 2;
-        }else{
-            currentMove->player = 1;
-        }
 
         // aktuelles Spielmenü ausgeben
         gameMenu(currentMove, game_move_status);
@@ -628,21 +638,52 @@ void startGame(){
 
         switch (choice){
             case 8:
-                exitGameMenu();
+                exitGameMenu(currentMove);
                 break;
             case 9:
-                printf("TODO: Zurück Funktion\n");
+                if(currentMove->number == 1){
+                    printf("%sEs gibt keinen vorherigen Spielzug%s\n", F_RED, RESET);
+                    sleep(2);
+                    currentMove->number = 0;
+                }else if (currentMove->number == 2){
+                    // letzten Spielzug löschen
+                    undoLastMove(&history);
+                    // aktuellen Spielzug aktualisieren
+                    currentMove = getLastMove(&history);
+                    // Spielzug auf 0 setzen
+                    currentMove->number = 0;
+                    appendGameMove(&history, currentMove);
+                }else if (currentMove->number > 2){
+                    // letzten Spielzug löschen
+                    undoLastMove(&history);
+                    // aktuellen Spielzug aktualisieren
+                    currentMove = getLastMove(&history); 
+                }
                 break;
             default:
                 // Stein fallen lassen
                 game_move_status = dropPiece(choice - 1, currentMove);
-                // Den aktuellen Spielzug in die Historie eintragen
-                insertGameMove(currentMove, &history);
+                // Spielzug in die Historie eintragen
+                appendGameMove(&history, currentMove);
                 break;
         }
     }
+    // Siegerehrung, wenn ein Spieler gewonnen 
+    if(checkwin(currentMove) != 0){
+        winner = currentMove->player;
+        win_reason = checkwin(currentMove);        
+        clearConsole();
+        printBoard(currentMove);
+        announceWinner(winner, win_reason);
+    }
+    // Unentschieden, wenn alle Felder belegt sind und kein Spieler gewonnen hat
+    if((checkwin(currentMove) == 0) && (currentMove->number == MAXGAMEMOVES)){
+        clearConsole();
+        printBoard(currentMove);
+        announceWinner(0, 0);
+    }
+    freeGameMoveHistory(&history);
 }
-
 
 // -------------------------------------- Spielfunktionen --------------------------------------
 
@@ -738,6 +779,8 @@ int checkwin(GameMove* currentMove) {
 }
 
 void announceWinner(int winner, int r){
+   
+   // Grund für den Gewinn
    char* reason;
    switch (r)
    {
@@ -756,6 +799,7 @@ void announceWinner(int winner, int r){
    default:
     break;
    }
+
     // Bekanntgabe des Gewinners
    printf("%s", F_YELLOW);
    printLine('=', MENUWIDTH);
@@ -768,6 +812,7 @@ void announceWinner(int winner, int r){
     }
     // Unentschieden
     else{
+        printEmoticon();
         printf("\n                     %sUNENTSCHIEDEN%s%s\n\n", UNDERLINE, RESET, F_YELLOW);
         printLine('=', MENUWIDTH);
     }
@@ -777,7 +822,23 @@ void announceWinner(int winner, int r){
 
 // -------------------------------------- Funktionen zum Speichern des aktuellen Spielstands --------------------------------------
 
+// Funktion zum Speichern des Spielstands
+void saveGame(GameMove* currentMove, const char *filename) {
+    FILE *file = fopen(filename, "wb");
 
+    if (file != NULL) {
+        // Spielbrett speichern
+        fwrite(gameState->board, sizeof(char), ROWS * COLS, file);
+
+        // Aktuellen Spieler speichern
+        fwrite(&(gameState->currentPlayer), sizeof(char), 1, file);
+
+        fclose(file);
+        printf("Spielstand erfolgreich gespeichert.\n");
+    } else {
+        printf("Fehler beim Öffnen der Datei zum Speichern des Spielstands.\n");
+    }
+}
 
 // -------------------------------------- EndScreen --------------------------------------
 
@@ -795,35 +856,94 @@ void printEndScreen(){
 
 // -------------------------------------- Doppelt verkettete Liste --------------------------------------
 
-// Funktion zum Anhängen eines neuen Spielzugs an die Liste
-void insertGameMove(GameMove* newmove, GameMoveHistory* history){
-    GameMove *temp;
-    temp = history->gamestart;
-    while(temp->next != NULL){
-        temp = temp->next;
-    }
-    temp->next = newmove;
-}
-
-// Funktion zum Löschen eines Spielzugs aus der Liste
-void deleteGameMove(GameMove* deletemove, GameMoveHistory* history){
-    GameMove *temp;
-    GameMove *del;
-    temp = history->gamestart;
-    if(temp == deletemove){
-        history->gamestart = temp->next;
-        free(temp);
+// Funktion zum Einfügen eines neuen Spielzugs am Ende der Liste
+void appendGameMove(GameMoveHistory* history, GameMove* currentMove) {
+    // Erstelle einen neuen Spielzug
+    GameMove* newMove = malloc(sizeof(GameMove));
+    
+    if (newMove == NULL) {
+        // Fehler beim Speicher reservieren
+        printf("%sFehler beim Speicher reservieren%s\n", F_RED, RESET);
         return;
     }
 
-    while(temp  != NULL){
-        if(temp->next == deletemove){
-            del = temp->next;
-            temp->next = del->next;
-            free(del);
+    // Setze die Werte für den neuen Spielzug
+    newMove->number = currentMove->number;
+    newMove->player = currentMove->player;
+
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            newMove->board[i][j] = currentMove->board[i][j];
         }
-        temp = temp->next;
     }
+    newMove->next = NULL;  // Der neue Spielzug wird das letzte Element sein
+    newMove->previous = NULL; 
+
+    // Wenn die Liste leer ist, setze gamestart auf den neuen Spielzug
+    if (history->gamestart == NULL) {
+        history->gamestart = newMove;
+    } else {
+        // Andernfalls füge den neuen Spielzug am Ende der Liste ein
+        GameMove* currentMove = history->gamestart;
+        // Durchlaufe die Liste bis zum letzten Spielzug (next == NULL)
+        while (currentMove->next != NULL) {
+            currentMove = currentMove->next;
+        }
+        // Verknüpfe den letzten Spielzug mit dem neuen Spielzug
+        currentMove->next = newMove;
+        // Verknüpfe den neuen Spielzug mit dem letzten Spielzug
+        newMove->previous = currentMove;
+    }
+}
+
+// Funktion zum Abrufen des letzten Spielzugs
+GameMove* getLastMove(GameMoveHistory* history) {
+    if (history->gamestart == NULL) {
+        // Die Liste ist leer
+        return NULL;
+    }
+
+    // Finde das letzte Element in der Liste
+    GameMove* lastMove = history->gamestart;
+    while (lastMove->next != NULL) {
+        lastMove = lastMove->next;
+    }
+
+    return lastMove;
+}
+
+// Funktion zum freigeben des Speichers der doppelt verketteten Liste
+void freeGameMoveHistory(GameMoveHistory* history) {
+    GameMove* currentMove = history->gamestart;
+    GameMove* nextMove;
+    // Durchlaufe die Liste und gib den Speicher für jeden Spielzug frei
+    while (currentMove != NULL) {
+        nextMove = currentMove->next;
+        free(currentMove);
+        currentMove = nextMove;
+    }
+    // Setze den Zeiger in der GameMoveHistory auf NULL, um sicherzustellen, dass er nicht auf ungültigen Speicher zeigt.
+    history->gamestart = NULL;
+}
+
+// Funktion zum Rückgängigmachen des letzten Spielzugs
+
+void undoLastMove(GameMoveHistory* history) {
+    // Die Liste ist leer
+    if (history->gamestart == NULL) {
+        return;
+    }
+
+    // Finde das letzte Element in der Liste
+    GameMove* lastMove = getLastMove(history);
+
+    // Der vorherige Spielzug wird das neue letzte Element
+    GameMove* newLastMove = lastMove->previous;
+    // Der Zeiger des neuen letzten Spielzugs auf NULL setzen
+    newLastMove->next = NULL;
+
+    // Freigabe des Speichers für den letzten Spielzug
+    free(lastMove);
 }
 
 // ======================================================================================== 
