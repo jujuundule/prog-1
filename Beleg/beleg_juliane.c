@@ -126,9 +126,6 @@ void announceWinner(int, int);
 // End Screen
 void printEndScreen(void);
 
-// Speichern des Spielstands
-void saveGame(GameMove*, const char);
-
 // Doppelt verkettete Liste
 void appendGameMove(GameMoveHistory*, GameMove*);
 GameMove* getLastMove(GameMoveHistory*);
@@ -822,23 +819,6 @@ void announceWinner(int winner, int r){
 
 // -------------------------------------- Funktionen zum Speichern des aktuellen Spielstands --------------------------------------
 
-// Funktion zum Speichern des Spielstands
-void saveGame(GameMove* currentMove, const char *filename) {
-    FILE *file = fopen(filename, "wb");
-
-    if (file != NULL) {
-        // Spielbrett speichern
-        fwrite(gameState->board, sizeof(char), ROWS * COLS, file);
-
-        // Aktuellen Spieler speichern
-        fwrite(&(gameState->currentPlayer), sizeof(char), 1, file);
-
-        fclose(file);
-        printf("Spielstand erfolgreich gespeichert.\n");
-    } else {
-        printf("Fehler beim Öffnen der Datei zum Speichern des Spielstands.\n");
-    }
-}
 
 // -------------------------------------- EndScreen --------------------------------------
 
