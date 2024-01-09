@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <string.h>
 
 // ======================================================================================== 
 //                                     Makros und Konstanten
@@ -49,28 +50,36 @@
 // Spielzüge
 #define MAXGAMEMOVES 42
 
+// Menübreite
+#define MENUWIDTH 55
+
 // ======================================================================================== 
 //                               Strukturen und Typdefinitionen:
 // ======================================================================================== 
 
-// Struktur: Spielzug
-struct GameMove{
+typedef struct {
     int number;
     int player;
     char board[ROWS][COLS];
-    struct GameMove *next;
-    struct GameMove *previous;
-};
+    struct GameMove* next;
+    struct GameMove* previous;
+} GameMove;
+
+typedef struct {
+    GameMove* gamestart;
+} GameMoveHistory;
 
 // Struktur: Spieler
-struct Player{
+typedef struct {
     char name[26];
     char piece; 
-}player_1, player_2;
+}Player;
 
 // Initialisiere Spieler
-struct Player player_1 = {"Spieler 1", 'X'};
-struct Player player_2 = {"Spieler 2", 'O'};
+Player player_1 = {"Spieler 1", 'X'};
+Player player_2 = {"Spieler 2", 'O'};
+
+
 
 // ======================================================================================== 
 //                                  Funktions-Deklarationen 
@@ -87,7 +96,7 @@ void clearConsole(void);
 
 // Nutzereingabe und Validierung
 int getUserInput(char*, int, int);
-int inputName(struct Player*, int);
+int inputName(Player*, int);
 
 // Menüs
 void mainMenu(void);
@@ -96,29 +105,32 @@ void twoPlayersMenu(void);
 void namePlayersMenu(void);
 void exitGameMenu(void);
 void loadGameMenu(void);
-void gameMenu(int, int, int);
+void gameMenu(GameMove*, int);
 
 // Spiel starten: 2 Spieler
 void startGame(void);
 
 // Spielfunktionen
-void initializeBoard(void);
-void printBoard(void);
-int dropPiece(int, int);
-int checkwin(int);
-void announceWinner(int);
+void initializeBoard(GameMove*);
+void printBoard(GameMove*);
+int dropPiece(int, GameMove*);
+int checkwin(GameMove*);
+void announceWinner(int, int);
 
 // End Screen
 void printEndScreen(void);
 
-// Für die Undo Funktion
-void appendMove(struct GameMove**, int);
+// Doppelt verkettete Liste
+void insertGameMove(GameMove*, GameMoveHistory*);
+void deleteGameMove(GameMove*, GameMoveHistory*);
 
 // ======================================================================================== 
 //                                      Globale Variablen
 // ======================================================================================== 
 
-char board[ROWS][COLS];
+
+
+
 
 // ======================================================================================== 
 //                                   Funktions-Definitionen  
@@ -185,9 +197,9 @@ int getUserInput(char *instruction, int min, int max) {
         // Aufforderung an den Nutzer ausgeben
         printf("%s [%d-%d]: ", instruction, min, max);
 
-        // Eingabe überprüfen
         validInput = scanf("%d", &input);
-
+        
+        // Eingabe überprüfen
         if (validInput != 1 || input < min || input > max) {
             // Fehlerhafte Eingabe behandeln
             printf("%sFalsche Eingabe%s\n", F_RED, RESET);
@@ -219,7 +231,7 @@ int getUserInput(char *instruction, int min, int max) {
     return input;
 }
 
-int inputName(struct Player *player, int maxLength) {
+int inputName(Player* player, int maxLength) {
     int validInput = 0;
     while(!validInput){
         printf("Bitte geben Sie einen neuen Namen ein (maximal %d Buchstaben): ", maxLength);
@@ -250,6 +262,7 @@ int inputName(struct Player *player, int maxLength) {
         // Entferne das newline-Zeichen am Ende des Namens, das durch fgets hinzugefügt wurde
         player->name[strcspn(player->name, "\n")] = '\0';
     }
+    return validInput;
 }
 
 // -------------------------------------- Hauptmenü --------------------------------------
@@ -261,12 +274,12 @@ void mainMenu(){
     
     // Menü ausgeben
     printf("%s", F_CYAN);
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("\n                       %sHAUPTMENÜ%s%s\n\n", UNDERLINE, RESET, F_CYAN);
     printf("                 1 - Neues Spiel starten\n");
     printf("                 2 - Spielstand laden\n");
     printf("                 3 - Spiel beenden\n\n");
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("%s", RESET);
     
     // Menüauswahl
@@ -297,12 +310,12 @@ void newGameMenu(){
 
     // Menü ausgeben
     printf("%s", F_CYAN);
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("\n                  %sNEUES SPIEL STARTEN%s%s\n\n", UNDERLINE, RESET, F_CYAN);
     printf("                 1 - 2 Spieler\n");
     printf("                 2 - Gegen Computer spielen\n");
     printf("                 3 - Zurück\n\n");
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("%s", RESET);
     
     // Menüauswahl
@@ -333,12 +346,12 @@ void twoPlayersMenu(){
 
     // Menü ausgeben
     printf("%s", F_CYAN);
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("\n                        %s2 SPIELER%s%s\n\n", UNDERLINE, RESET, F_CYAN);
     printf("                 1 - Spiel starten\n");
     printf("                 2 - Spieler umbenennen\n");
     printf("                 3 - Zurück\n\n");
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("%s", RESET);
     
     // Menüauswahl
@@ -369,12 +382,12 @@ void namePlayersMenu(){
 
     // Menü ausgeben
     printf("%s", F_CYAN);
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("\n                    %sSPIELER UMBENENNEN%s%s\n\n", UNDERLINE, RESET, F_CYAN);
     printf("                 1 - Spieler 1 umbenennen\n");
     printf("                 2 - Spieler 2 umbenennen\n");
     printf("                 3 - Zurück\n\n");
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("%s", RESET);
     
     // Menüauswahl
@@ -421,12 +434,12 @@ void exitGameMenu(){
 
     // Menü ausgeben
     printf("%s", F_CYAN);
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("\n                      %sSPIEL BEENDEN%s%s\n\n", UNDERLINE, RESET, F_CYAN);
     printf("                 1 - Spielstand speichern\n");
     printf("                 2 - Ohne Speichern beenden\n");
     printf("                 3 - Spiel wieder aufnehmen\n\n");
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("%s", RESET);
 
     // Menüauswahl
@@ -434,7 +447,7 @@ void exitGameMenu(){
 
     switch (choice){
             case 1:
-                printf("TODO: Spielstand speichern Funktion\n");
+                printf("TODO Spielstand speichern Funktion\n");
                 break;
             case 2:
                 mainMenu();
@@ -447,8 +460,17 @@ void exitGameMenu(){
                 break;
     }
 }
+// -------------------------------------- Untermenü "Spiel laden" --------------------------------------
 
-// -------------------------------------- Untermenü "Spiel beenden" --------------------------------------
+void saveGameMenu(struct GameMove* head) {
+    char fileName[50];
+    
+    // Benutzer nach dem Dateinamen fragen
+    printf("Bitte geben Sie den Dateinamen zum Speichern des Spielstands ein: ");
+    scanf("%s", fileName);
+}
+
+// -------------------------------------- Untermenü "Spiel laden" --------------------------------------
 
 void loadGameMenu(){
     
@@ -457,12 +479,12 @@ void loadGameMenu(){
 
     // Menü ausgeben
     printf("%s", F_CYAN);
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("\n                    %sSPIELSTAND LADEN%s%s\n\n", UNDERLINE, RESET, F_CYAN);
     printf("                 1 - 'Dateiname' - DDMMYY\n");
     printf("                 2 - 'Dateiname' - DDMMYY\n");
     printf("                 3 - Zurück\n\n");
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("%s", RESET);
 
     // Menüauswahl
@@ -486,16 +508,16 @@ void loadGameMenu(){
 
 // -------------------------------------- Game Menü --------------------------------------
 
-void gameMenu(int game_move_number, int game_move_status, int currentPlayer) {
+void gameMenu(GameMove* currentMove, int game_move_status) {
     // Menü ausgeben
     printf("%s", F_CYAN);
     for (int i = 0; i < COLS; i++) {
         printf("  %d ", i + 1);
     }
     printf("\n\n8 - Spiel beenden\n9 - Zurück" RESET "\n\n");
-    printf("%sSpielzug: %d von %d %s\n\n", F_YELLOW, game_move_number, MAXGAMEMOVES, RESET);
+    printf("%sSpielzug: %d von %d %s\n\n", F_YELLOW, currentMove->number, MAXGAMEMOVES, RESET);
 
-    printf("%s%s:%s\n", F_MAGENTA, (currentPlayer == 1)? player_1.name : player_2.name, RESET);
+    printf("%s%s:%s\n", F_MAGENTA, (currentMove->player == 1)? player_1.name : player_2.name, RESET);
 
     if (game_move_status == 0) {
         printf("%sDie Zeile ist voll%s\n", F_RED, RESET);
@@ -506,11 +528,11 @@ void gameMenu(int game_move_number, int game_move_status, int currentPlayer) {
 void announceWinnerMenu() {
     // Menü ausgeben
     printf("%s", F_CYAN);
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("\n                 1 - Zurück zum Hauptmenü\n");
     printf("                 2 - Spiel neustarten\n");
     printf("                 3 - Spiel beenden\n\n");
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("%s", RESET);
 
     // Menüauswahl
@@ -535,12 +557,26 @@ void announceWinnerMenu() {
 // -------------------------------------- Spiel starten --------------------------------------
 
 void startGame(){
-    // Initialisiere Variablen
+    
+    // Erselle eine Historie für die Spielzüge
+    GameMoveHistory history;
+
+    // Erstelle den ersten Spielzug
+    GameMove* currentMove = malloc(sizeof(GameMove));
+    
+    //  Spielzug initialisieren
+    currentMove->number = 0;
+    currentMove->player = 1;
+    currentMove->next = NULL;
+    currentMove->previous = NULL;
+
+    // den ersten Spielzug in die Historie eintragen
+    history.gamestart = currentMove;
+
     int choice = 0;
-    int game_move_number = 0; 
     int winner = 0;
-    int currentPlayer = 1; 
     int game_move_status = 1;
+    int win_reason = 0;
 
     // Konsole leeren
     clearConsole();
@@ -548,45 +584,44 @@ void startGame(){
     printf("\n%sEin neues Spiel wird gestartet.\nViel Spaß!%s %s %sund%s %s%s \n\n", F_GREEN, F_MAGENTA, player_1.name, F_GREEN, F_MAGENTA, player_2.name, RESET);
 
     sleep(2);
-    
+
     // Spielfeld wird initialisiert --> alle Felder mit " " füllen
-    initializeBoard();
+    initializeBoard(currentMove);
     
     // Schleife für abwechselnde Spielzüge
-    while((choice != 8) && (game_move_number <= MAXGAMEMOVES) && (winner == 0)){
-        
+    while((choice != 8) && (currentMove->number <= MAXGAMEMOVES) && (winner == 0) && (game_move_status == 1)){
+        // Spielzug hochzählen
+        currentMove->number++;
+
         // Konsole leeren
         clearConsole();
-        
+
         // Spielfeld ausgeben
-        printBoard();
+        printBoard(currentMove);
         
         // Spiel beenden, wenn ein Spieler gewonnen hat
-        if(checkwin(currentPlayer)){
-            winner = currentPlayer;
-            announceWinner(winner);
+        if(checkwin(currentMove) != 0){
+            winner = currentMove->player;
+            win_reason = checkwin(currentMove);
+            announceWinner(winner, win_reason);
             break;
         }
 
         // Spiel beenden, wenn maximale Anzahl von Spielzügen erfolgt ist
-        if(game_move_number >= MAXGAMEMOVES){
-            announceWinner(winner);
+        if(currentMove->number >= MAXGAMEMOVES){
+            announceWinner(winner, win_reason);
             break;
         }
 
-        // Überprüft ob Zeile voll ist
-        if(game_move_status == 1){
-            game_move_number++;
-        }
-
         // Festlegen, welcher Spieler gerade am Zug ist
-        if(game_move_number % 2 == 0){
-            currentPlayer = 2;
+        if(currentMove->number % 2 == 0){
+            currentMove->player = 2;
         }else{
-            currentPlayer = 1;
+            currentMove->player = 1;
         }
 
-        gameMenu(game_move_number, game_move_status, currentPlayer);
+        // aktuelles Spielmenü ausgeben
+        gameMenu(currentMove, game_move_status);
 
         // Menüauswahl
         choice = getUserInput("Bitte wählen Sie eine Option", 1, 9);
@@ -599,7 +634,10 @@ void startGame(){
                 printf("TODO: Zurück Funktion\n");
                 break;
             default:
-                game_move_status = dropPiece(choice - 1, game_move_number);
+                // Stein fallen lassen
+                game_move_status = dropPiece(choice - 1, currentMove);
+                // Den aktuellen Spielzug in die Historie eintragen
+                insertGameMove(currentMove, &history);
                 break;
         }
     }
@@ -609,21 +647,21 @@ void startGame(){
 // -------------------------------------- Spielfunktionen --------------------------------------
 
 // Spielfeld initialsieren
-void initializeBoard(){
+void initializeBoard(GameMove* currentMove){
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLS; j++) {
-            board[i][j] = ' ';
+            currentMove->board[i][j] = ' ';
         }
     }
 }
 
 // Spielfeld ausgeben
-void printBoard() {
+void printBoard(GameMove* currentMove) {
     int i,j;
     printLine('-', 28);
     for (i = 0; i < ROWS; i++) {
         for (j = 0; j < COLS; j++) {
-            printf("| %c ", board[i][j]);
+            printf("| %c ", currentMove->board[i][j]);
         }
         printf("|\n");
         printLine('-', 28);
@@ -631,14 +669,14 @@ void printBoard() {
 }
 
 // Stein fallen lassen
-int dropPiece(int col, int n) {
+int dropPiece(int column, GameMove* currentMove) {
     for (int i = ROWS - 1; i >= 0; i--) {
-        if ((board[i][col] == ' ') && (n % 2 != 0)) {
-            board[i][col] = player_1.piece;
+        if ((currentMove->board[i][column] == ' ') && (currentMove->number % 2 != 0)) {
+            currentMove->board[i][column] = player_1.piece;
             return 1;  // Erfolgreicher Spielzug
         }
-        if ((board[i][col] == ' ') && (n % 2 == 0)) {
-            board[i][col] = player_2.piece;
+        if ((currentMove->board[i][column] == ' ') && (currentMove->number % 2 == 0)) {
+            currentMove->board[i][column] = player_2.piece;
             return 1;  // Erfolgreicher Spielzug
         }
     }
@@ -647,15 +685,15 @@ int dropPiece(int col, int n) {
 
 // Überprüfung ob ein Spieler gewonnen hat
 
-int checkwin(int currentPlayer) {
-    currentPlayer = (currentPlayer % 2 != 0) ? player_1.piece : player_2.piece;
+int checkwin(GameMove* currentMove) {
+    char piece = (currentMove->player == 1) ? player_1.piece : player_2.piece;
     // Überprüfen horizontal
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j <= COLS - 4; j++) {
-            if (board[i][j] == currentPlayer &&
-                board[i][j + 1] == currentPlayer &&
-                board[i][j + 2] == currentPlayer &&
-                board[i][j + 3] == currentPlayer) {
+            if (currentMove->board[i][j] == piece &&
+                currentMove->board[i][j + 1] == piece &&
+                currentMove->board[i][j + 2] == piece &&
+                currentMove->board[i][j + 3] == piece) {
                 return 1;
             }
         }
@@ -664,11 +702,11 @@ int checkwin(int currentPlayer) {
     // Überprüfen vertikal
     for (int i = 0; i <= ROWS - 4; i++) {
         for (int j = 0; j < COLS; j++) {
-            if (board[i][j] == currentPlayer &&
-                board[i + 1][j] == currentPlayer &&
-                board[i + 2][j] == currentPlayer &&
-                board[i + 3][j] == currentPlayer) {
-                return 1;
+            if (currentMove->board[i][j] == piece &&
+                currentMove->board[i + 1][j] == piece &&
+                currentMove->board[i + 2][j] == piece &&
+                currentMove->board[i + 3][j] == piece) {
+                return 2;
             }
         }
     }
@@ -676,11 +714,11 @@ int checkwin(int currentPlayer) {
     // Überprüfen diagonal (nach rechts oben)
     for (int i = 3; i < ROWS; i++) {
         for (int j = 0; j <= COLS - 4; j++) {
-            if (board[i][j] == currentPlayer &&
-                board[i - 1][j + 1] == currentPlayer &&
-                board[i - 2][j + 2] == currentPlayer &&
-                board[i - 3][j + 3] == currentPlayer) {
-                return 1;
+            if (currentMove->board[i][j] == piece &&
+                currentMove->board[i - 1][j + 1] == piece &&
+                currentMove->board[i - 2][j + 2] == piece &&
+                currentMove->board[i - 3][j + 3] == piece) {
+                return 3;
             }
         }
     }
@@ -688,35 +726,57 @@ int checkwin(int currentPlayer) {
     // Überprüfen diagonal (nach links oben)
     for (int i = 3; i < ROWS; i++) {
         for (int j = 3; j < COLS; j++) {
-            if (board[i][j] == currentPlayer &&
-                board[i - 1][j - 1] == currentPlayer &&
-                board[i - 2][j - 2] == currentPlayer &&
-                board[i - 3][j - 3] == currentPlayer) {
-                return 1;
+            if (currentMove->board[i][j] == piece &&
+                currentMove->board[i - 1][j - 1] == piece &&
+                currentMove->board[i - 2][j - 2] == piece &&
+                currentMove->board[i - 3][j - 3] == piece) {
+                return 4;
             }
         }
     }
     return 0;
 }
 
-void announceWinner(int winner){
+void announceWinner(int winner, int r){
+   char* reason;
+   switch (r)
+   {
+   case 1:
+        reason = "horizontal";
+    break;
+    case 2:
+        reason = "vertikal";
+    break;
+    case 3:
+        reason = "diagonal (nach rechts oben)";
+    break;
+    case 4:
+        reason = "diagonal (nach links oben)";
+    break;
+   default:
+    break;
+   }
     // Bekanntgabe des Gewinners
    printf("%s", F_YELLOW);
-   printLine('=', 55);
+   printLine('=', MENUWIDTH);
     if(winner != 0){
         printTrophy();
         printf("\n                 %sHERZLICHEN GLÜCKWUNSCH%s%s\n\n", UNDERLINE, RESET, F_YELLOW);
-        printf("                 %s%s [%c]%s hat gewonnen \n\n", F_MAGENTA, (winner == 1)? player_1.name : player_2.name, (winner == 1)? player_1.piece : player_2.piece, F_YELLOW);
-        printLine('=', 55);    
+        printf("                 %s%s [%c]%s hat gewonnen \n", F_MAGENTA, (winner == 1)? player_1.name : player_2.name, (winner == 1)? player_1.piece : player_2.piece, F_YELLOW);
+        printf("                 [%s]\n\n", reason);
+        printLine('=', MENUWIDTH);    
     }
     // Unentschieden
     else{
         printf("\n                     %sUNENTSCHIEDEN%s%s\n\n", UNDERLINE, RESET, F_YELLOW);
-        printLine('=', 55);
+        printLine('=', MENUWIDTH);
     }
     printf("%s", RESET);
     announceWinnerMenu();
 }
+
+// -------------------------------------- Funktionen zum Speichern des aktuellen Spielstands --------------------------------------
+
 
 
 // -------------------------------------- EndScreen --------------------------------------
@@ -725,41 +785,45 @@ void printEndScreen(){
     clearConsole();
     printGoodbye();
     printf("\n%s", F_RED);
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("\n                      SPIEL BEENDET\n\n");
-    printLine('=', 55);
+    printLine('=', MENUWIDTH);
     printf("%s\n", RESET);
     sleep(3);
     clearConsole();
 }
 
+// -------------------------------------- Doppelt verkettete Liste --------------------------------------
 
-// Funktion zum Hinzufügen eines neuen Knotens am Ende der Liste
-void appendMove(struct GameMove** head, int col){
-    int i;
-    // Neuen Knoten erstellen
-    struct GameMove* newGameMove = (struct GameMove*)malloc(sizeof(struct GameMove));
-    // Spielfeld aktualisieren
-    for (i = ROWS - 1; i >= 0; i--) {
-            if (newGameMove->board[i][col] == ' ') {
-                newGameMove->board[i][col] = 'X';
-            }
+// Funktion zum Anhängen eines neuen Spielzugs an die Liste
+void insertGameMove(GameMove* newmove, GameMoveHistory* history){
+    GameMove *temp;
+    temp = history->gamestart;
+    while(temp->next != NULL){
+        temp = temp->next;
     }
-    newGameMove->next = NULL;
-    // Wenn die Liste leer ist, wird der neue Knoten der Kopf der Liste
-    if (*head == NULL) {
-        newGameMove->previous = NULL;
-        *head = newGameMove;
+    temp->next = newmove;
+}
+
+// Funktion zum Löschen eines Spielzugs aus der Liste
+void deleteGameMove(GameMove* deletemove, GameMoveHistory* history){
+    GameMove *temp;
+    GameMove *del;
+    temp = history->gamestart;
+    if(temp == deletemove){
+        history->gamestart = temp->next;
+        free(temp);
         return;
     }
-    // Andernfalls zum Ende der Liste gehen
-    struct GameMove* last = *head;
-    while (last->next != NULL) {
-        last = last->next;
+
+    while(temp  != NULL){
+        if(temp->next == deletemove){
+            del = temp->next;
+            temp->next = del->next;
+            free(del);
+        }
+        temp = temp->next;
     }
-    // Den neuen Knoten an das Ende der Liste anhängen
-    last->next = newGameMove;
-    newGameMove->previous = last;
 }
 
 // ======================================================================================== 
